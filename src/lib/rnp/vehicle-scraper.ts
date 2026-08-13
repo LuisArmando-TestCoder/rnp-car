@@ -1,4 +1,3 @@
-import { chromium } from "playwright";
 import { RnpVehicleScrapeOptions, RnpVehicleScrapeResult } from "./types";
 import { performSecureLogin, safeLogout } from "./auth";
 import { extractVehicleDataWithLLM } from "./vehicle-llm-parser";
@@ -49,9 +48,10 @@ export async function scrapeVehicleData(
     hasCredentials: Boolean(rnpUser && rnpPass),
   });
 
-  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+  let browser: import("playwright").Browser | null = null;
 
   try {
+    const { chromium } = await import("playwright");
     browser = await chromium.launch({
       headless,
       args: ["--no-sandbox", "--disable-dev-shm-usage"],

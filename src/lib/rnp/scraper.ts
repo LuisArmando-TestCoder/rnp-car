@@ -1,4 +1,3 @@
-import { chromium } from "playwright";
 import { RnpScrapeOptions, RnpScrapeResult } from "./types";
 import { performSecureLogin, safeLogout } from "./auth";
 import { navigateToPropertySearch } from "./navigation";
@@ -46,9 +45,10 @@ export async function scrapePropertyData(
     hasCredentials: Boolean(rnpUser && rnpPass),
   });
 
-  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+  let browser: import("playwright").Browser | null = null;
 
   try {
+    const { chromium } = await import("playwright");
     browser = await chromium.launch({
       headless,
       args: ["--no-sandbox", "--disable-dev-shm-usage"],

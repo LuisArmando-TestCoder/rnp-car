@@ -1,4 +1,3 @@
-import { chromium } from "playwright";
 import { RnpFormOptions } from "./types";
 import { performSecureLogin, safeLogout } from "./auth";
 import { getFirstCredential } from "./credentials";
@@ -16,8 +15,9 @@ export async function extractVehicleFormOptions(
   const env = getFirstCredential();
   const user = opts.credentials?.user || env?.user;
   const pass = opts.credentials?.pass || env?.pass;
-  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+  let browser: import("playwright").Browser | null = null;
   try {
+    const { chromium } = await import("playwright");
     browser = await chromium.launch({ headless, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
     const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
     const page = await ctx.newPage();
