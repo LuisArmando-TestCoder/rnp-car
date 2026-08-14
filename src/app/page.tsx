@@ -33,8 +33,6 @@ export default function Home() {
   const [consultationType, setConsultationType] = useState<ConsultationType>("vehiculo");
   const [vinInput, setVinInput] = useState("");
   const [codeClass, setCodeClass] = useState("");
-  const [documentType, setDocumentType] = useState("");
-  const [vehicleType, setVehicleType] = useState("");
   const [formOptions, setFormOptions] = useState<RnpFormOptions | null>(null);
   const [polizaFormOptions, setPolizaFormOptions] = useState<RnpPolizaFormOptions | null>(null);
   const [optionsError, setOptionsError] = useState<string | null>(null);
@@ -61,8 +59,6 @@ export default function Home() {
         const json = (await res.json()) as RnpFormOptions;
         if (!cancelled) {
           setFormOptions(json);
-          if (json.documentTypes?.length) setDocumentType(json.documentTypes[0]);
-          if (json.vehicleTypes?.length) setVehicleType(json.vehicleTypes[0]);
           if (!json.reachable) setOptionsError(json.error || "No se pudo cargar las opciones del formulario");
         }
       } catch (e) {
@@ -98,9 +94,6 @@ export default function Home() {
   const searchValue = vinInput;
   const detectedMode = vinInput.trim() ? detectMode(vinInput) : null;
   const detectedLabel = detectedMode === "vin" ? "VIN" : detectedMode === "nombre" ? "Nombre" : "Placa";
-  const detectedSearchType =
-    detectedMode === "vin" ? "Número de VIN" : detectedMode === "nombre" ? "Nombre" : "Número de Placa";
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchValue.trim()) return;
@@ -119,8 +112,6 @@ export default function Home() {
       searchMode: mode,
       searchType:
         mode === "vin" ? "Número de VIN" : mode === "nombre" ? "Nombre" : "Número de Placa",
-      documentType: documentType || undefined,
-      vehicleType: vehicleType || undefined,
       codeClass: mode === "placa" ? codeClass || undefined : undefined,
       vin: mode === "vin" ? searchValue.trim() : undefined,
       plate: mode === "placa" ? searchValue.trim() : undefined,
@@ -446,65 +437,6 @@ export default function Home() {
                     </select>
                   </div>
                 )}
-              </div>
-
-              {/* Step 3: Form selections (all options from the RNP form) */}
-              <div className={styles.step}>
-                <span className={styles.stepLabel}>3. Selecciones del formulario</span>
-                <div className={styles.formRow}>
-                  <select
-                    className={styles.select}
-                    value={detectedSearchType}
-                    disabled
-                    title="Se detecta automáticamente según el dato ingresado"
-                  >
-                    {formOptions?.searchTypes?.length ? (
-                      ["Número de Placa", ...formOptions.searchTypes.filter((t) => t !== "Número de Placa")].map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="Número de Placa">Número de Placa</option>
-                        <option value="Número de VIN">Número de VIN</option>
-                        <option value="Nombre">Nombre</option>
-                      </>
-                    )}
-                  </select>
-                  <select
-                    className={styles.select}
-                    value={documentType}
-                    onChange={(e) => setDocumentType(e.target.value)}
-                    disabled={loading}
-                  >
-                    {formOptions?.documentTypes?.length ? (
-                      formOptions.documentTypes.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">Tipo de documento</option>
-                    )}
-                  </select>
-                  <select
-                    className={styles.select}
-                    value={vehicleType}
-                    onChange={(e) => setVehicleType(e.target.value)}
-                    disabled={loading}
-                  >
-                    {formOptions?.vehicleTypes?.length ? (
-                      formOptions.vehicleTypes.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">Tipo de vehículo</option>
-                    )}
-                  </select>
-                </div>
               </div>
             </>
           )}
