@@ -5,7 +5,6 @@ import styles from "./page.module.scss";
 import type { RnpVehicleData, RnpFormOptions } from "@/lib/rnp";
 import { buildVehicleReport } from "@/lib/report";
 import { renderReportHtml, buildReportDocx } from "@/lib/report-export";
-import { toPng } from "html-to-image";
 import Reveal from "@/components/Reveal";
 
 type StreamEvent =
@@ -35,7 +34,6 @@ export default function Home() {
   const [transmissionType, setTransmissionType] = useState("");
   const [exportPlate, setExportPlate] = useState("");
   const abortRef = useRef<AbortController | null>(null);
-  const resultsRef = useRef<HTMLDivElement | null>(null);
 
   // Load the RNP form options (clase de código, search types, etc.) on mount
   useEffect(() => {
@@ -215,21 +213,24 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  // Download both the image (screenshot of the results as they look) and the
-  // Word document in one click.
-  const handleExportImageAndDocx = async () => {
-    if (!data || !resultsRef.current) return;
-    try {
-      const png = await toPng(resultsRef.current, { pixelRatio: 2 });
-      const pngBlob = await (await fetch(png)).blob();
-      const pngUrl = URL.createObjectURL(pngBlob);
+  // Download both the RNP result PDF (the Registro Nacional page as it
+  // appeared after the form was filled and submitted) and the Word document
+  // in one click.
+  const handleExportRnpPdfAndDocx = async () => {
+    if (!data) return;
+    if (data.resultPdfBase64) {
+      const byteChars = atob(data.resultPdfBase64);
+      const bytes = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
+      const pdfBlob = new Blob([bytes], { type: "application/pdf" });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
       const a = document.createElement("a");
-      a.href = pngUrl;
-      a.download = `informe-pericial-${data.plate.replace(/\s+/g, "-")}.png`;
+      a.href = pdfUrl;
+      a.download = `rnp-resultado-${data.plate.replace(/\s+/g, "-")}.pdf`;
       a.click();
-      URL.revokeObjectURL(pngUrl);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      URL.revokeObjectURL(pdfUrl);
+    } else {
+      setError("No se pudo capturar el PDF del Registro Nacional.");
       return;
     }
     const blob = await buildReportDocx(data, { odometer, transmissionType, plate: exportPlate });
@@ -419,7 +420,7 @@ export default function Home() {
         {error && <div className={styles.error}>{error}</div>}
 
         {data && (
-          <div className={styles.results} ref={resultsRef}>
+          <div className={styles.results}>
             <div className={styles.exportRow}>
               <label className={styles.exportField}>
                 <span className={styles.fieldLabel}>Odómetro (km)</span>
@@ -463,8 +464,8 @@ export default function Home() {
               <button className={styles.button} type="button" onClick={handleExportHtml}>
                 Exportar HTML
               </button>
-              <button className={styles.button} type="button" onClick={handleExportImageAndDocx}>
-                Imagen + Word
+              <button className={styles.button} type="button" onClick={handleExportRnpPdfAndDocx}>
+                PDF RNP + Word
               </button>
             </div>
             <section className={styles.card}>

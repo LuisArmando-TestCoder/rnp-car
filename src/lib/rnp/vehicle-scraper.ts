@@ -226,13 +226,32 @@ export async function scrapeVehicleData(
       return { status: "not_found", error: "Vehicle not found", logs };
     }
 
+    // STAGE 6b: Capture the RNP result page as a PDF (the page as it appears
+    // after the form was filled and submitted on Registro Nacional).
+    throwIfAborted();
+    logger.info("SCRAPER", "STAGE 6b - Capturing RNP result page as PDF...");
+    let resultPdfBase64: string | undefined;
+    try {
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      });
+      resultPdfBase64 = pdfBuffer.toString("base64");
+      logger.info("SCRAPER", `Captured RNP result PDF (${Math.round(pdfBuffer.length / 1024)} KB)`);
+    } catch (e) {
+      logger.warn("SCRAPER", "Failed to capture RNP result PDF (non-critical)", {
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+
     // STAGE 7: Extract vehicle data
     throwIfAborted();
     logger.info("SCRAPER", "STAGE 7 - Extracting vehicle data...");
     const data = await extractVehicleDataWithLLM(page);
     logger.info("SCRAPER", `Extracted vehicle: plate=${data.plate}, marca=${data.general.marca}`);
 
-    return { status: "success", data, logs };
+    return { status: "success", data: { ...data, resultPdfBase64 }, logs };
   } catch (error) {
     logger.error("SCRAPER", "Error during vehicle scraping pipeline", {
       error: error instanceof Error ? error.message : String(error),

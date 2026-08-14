@@ -132,6 +132,8 @@ export interface RnpVehicleData {
   };
   rawText: string;
   scrapedAt: string;
+  /** Base64-encoded PDF of the RNP result page as it appeared after form submission */
+  resultPdfBase64?: string;
 }
 
 export interface RnpVehicleScrapeResult {
