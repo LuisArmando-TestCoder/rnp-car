@@ -88,15 +88,15 @@ export function renderReportHtml(v: RnpVehicleData, fill: ReportFill): string {
     .header { position: running(header); text-align: right; padding-bottom: 2mm; }
     .header img { width: 18mm; height: 18mm; object-fit: contain; }
     .header hr { border: none; border-top: 1.5pt solid #1a1a1a; margin: 1.5mm 0 0; }
-    .footer-left { position: running(footer-left); font-size: 9pt; color: #333; }
-    .footer-right { position: running(footer-right); font-size: 9pt; color: #333; text-align: right; }
-    .footer-center { position: running(footer-center); font-size: 9pt; color: #333; text-align: center; }
+    .footer-left { position: running(footer-left); font-size: 9pt; color: #304060; }
+    .footer-right { position: running(footer-right); font-size: 9pt; color: #304060; text-align: right; }
+    .footer-center { position: running(footer-center); font-size: 9pt; color: #304060; text-align: center; }
     h1 { font-size: 26pt; letter-spacing: 0.02em; color: #0f0f0f; text-align: center; margin: 0 0 5mm; border-bottom: 2.5pt solid #1a1a1a; padding-bottom: 5mm; break-after: avoid; }
     .sub { text-align: center; font-variant: small-caps; letter-spacing: 0.16em; font-size: 14pt; margin: 0 0 0; break-after: avoid; }
     h2 { font-size: 14pt; letter-spacing: 0.03em; text-transform: uppercase; color: #0f0f0f; margin: 0 0 3mm; break-after: avoid; orphans: 3; widows: 3; }
     p { margin: 0 0 4mm; text-align: justify; orphans: 3; widows: 3; }
     .sp { height: 3mm; }
-    .sig { margin: 12mm 0 0; text-align: center; }
+    .sig { margin: 12mm 0 0; text-align: left; }
     p.char { margin: 0 0 2mm; text-align: left; }
   `;
   const header = `<div class="header"><img src="${LOGO_DATA_URI}" alt="logo"><hr></div>`;
@@ -122,7 +122,7 @@ export async function buildReportDocx(v: RnpVehicleData, fill: ReportFill) {
     } else if (l.kind === "blank") {
       children.push(new Paragraph({ spacing: { after: 120 } }));
     } else if (l.kind === "sig") {
-      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", size: 24, font: "Arial", color: "1a1a1a" })], alignment: "center", spacing: { after: 160 } }));
+      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", size: 24, font: "Arial", color: "1a1a1a" })], alignment: "left", spacing: { after: 0 } }));
     } else if (l.kind === "table" && l.rows) {
       // Render the characteristics fields as plain lines separated by break
       // lines (no table, no bullets, no numbering).
@@ -171,17 +171,17 @@ export async function buildReportDocx(v: RnpVehicleData, fill: ReportFill) {
         children: [
           new TableCell({
             width: { size: 33, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ children: [new TextRun({ text: "info@mylconsultoríasyperitajes.com", size: 18, font: "Arial", color: "333333" })] })],
+            children: [new Paragraph({ children: [new TextRun({ text: "info@mylconsultoríasyperitajes.com", size: 18, font: "Arial", color: "304060" })] })],
           }),
           new TableCell({
             width: { size: 34, type: WidthType.PERCENTAGE },
             children: [new Paragraph({
               alignment: AlignmentType.CENTER,
               children: [
-                new TextRun({ text: "Página ", size: 18, font: "Arial", color: "333333" }),
-                new TextRun({ children: [PageNumber.CURRENT], size: 18, font: "Arial", color: "333333" }),
-                new TextRun({ text: " de ", size: 18, font: "Arial", color: "333333" }),
-                new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, font: "Arial", color: "333333" }),
+                new TextRun({ text: "Página ", size: 18, font: "Arial", color: "304060" }),
+                new TextRun({ children: [PageNumber.CURRENT], size: 18, font: "Arial", color: "304060" }),
+                new TextRun({ text: " de ", size: 18, font: "Arial", color: "304060" }),
+                new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, font: "Arial", color: "304060" }),
               ],
             })],
           }),
@@ -189,7 +189,7 @@ export async function buildReportDocx(v: RnpVehicleData, fill: ReportFill) {
             width: { size: 33, type: WidthType.PERCENTAGE },
             children: [new Paragraph({
               alignment: AlignmentType.RIGHT,
-              children: [new TextRun({ text: "8998-4852 / 8408-5447", size: 18, font: "Arial", color: "333333" })],
+              children: [new TextRun({ text: "8998-4852 / 8408-5447", size: 18, font: "Arial", color: "304060" })],
             })],
           }),
         ],

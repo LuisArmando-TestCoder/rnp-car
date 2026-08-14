@@ -7,6 +7,15 @@ export interface ReportFill {
 }
 
 /**
+ * Formats an alphanumeric plate with a hyphen between letters and numbers,
+ * e.g. "CL 330873" -> "CL-330873".
+ */
+export function formatPlate(p: string): string {
+  const m = /^([A-Za-z]+)\s*(\d+.*)$/.exec(p.trim());
+  return m ? `${m[1]}-${m[2]}` : p.trim();
+}
+
+/**
  * Builds the full "Informe Pericial del Vehículo" report following the
  * "Argumentos periciales placa.docx" template. RN fields are filled from the
  * scraped data; manual and AI-fill sections keep the template placeholders.
@@ -15,7 +24,7 @@ export function buildVehicleReport(v: RnpVehicleData, fill: ReportFill = {}): st
   const owner = v.owners[0];
   const odometer = fill.odometer || "______________________";
   const transmission = fill.transmissionType || v.general.traccion || "______________________";
-  const plate = fill.plate || v.plate;
+  const plate = formatPlate(fill.plate || v.plate);
 
   const lines: string[] = [];
   const add = (s = "") => lines.push(s);
@@ -179,19 +188,9 @@ export function buildVehicleReport(v: RnpVehicleData, fill: ReportFill = {}): st
   addBlank();
   addBlank();
   add("Suscribe,");
-  addBlank();
-  addBlank();
-  addBlank();
-  addBlank();
-  addBlank();
-  addBlank();
-  addBlank();
   add("__________________________________");
-  addBlank();
   add("Lic. Luis Diego Murillo Gamboa");
-  addBlank();
   add("Perito Automotriz Certificado por CESVI Colombia");
-  addBlank();
   add("Carnet CPCECR 044653");
 
   return lines.join("\n");
