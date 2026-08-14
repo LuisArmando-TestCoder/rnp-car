@@ -16,6 +16,21 @@ export function formatPlate(p: string): string {
 }
 
 /**
+ * Resolves the net weight for the report. When the Registro Nacional record
+ * has pesoNeto as zero or empty (a known human-error gap in the registry),
+ * the perito uses the PVV (peso bruto vehicular / gross vehicle weight) as
+ * the alternative, since that field is usually filled in.
+ */
+export function resolvePesoNeto(v: RnpVehicleData): string {
+  const neto = (v.general.pesoNeto || "").trim();
+  const isZero = neto === "" || /^0(\.0+)?\s*(kg)?$/i.test(neto);
+  if (isZero && v.general.pbvFabricante) {
+    return `${v.general.pbvFabricante} (PVV)`;
+  }
+  return neto;
+}
+
+/**
  * Builds the full "Informe Pericial del Vehículo" report following the
  * "Argumentos periciales placa.docx" template. RN fields are filled from the
  * scraped data; manual and AI-fill sections keep the template placeholders.
@@ -44,7 +59,7 @@ export function buildVehicleReport(v: RnpVehicleData, fill: ReportFill = {}): st
   add(`Color: ${v.general.color}`);
   add(`VIN: ${v.general.vin}`);
   add(`Motor: ${v.engine.numeroMotor}, ${v.engine.cilindrada}, ${v.engine.potencia}, ${v.engine.combustible}`);
-  add(`Peso Neto: ${v.general.pesoNeto}`);
+  add(`Peso Neto: ${resolvePesoNeto(v)}`);
   add(`Año de fabricación: ${v.general.anioFabricacion}`);
   add(`Odómetro: ${odometer} kilómetros`);
   add(`Transmisión: ${transmission}`);

@@ -1,3 +1,26 @@
+# Perito rules (recorded from user feedback)
+
+## Peso Neto fallback to PVV
+When the Registro Nacional record has `pesoNeto` as zero or empty (a known
+human-error gap in the registry), the perito uses the **PVV** (peso bruto
+vehicular / gross vehicle weight) as the alternative, since that field is
+usually filled in. Implemented in `src/lib/report.ts` as `resolvePesoNeto()`:
+it returns `"<pbvFabricante> (PVV)"` when neto is zero/empty and a PVV value
+exists.
+
+## Footer color
+The footer (email, phone, page numbers) uses the logo's blue `#304060`.
+
+## Plate formatting
+Alphanumeric plates are hyphenated between letters and numbers in the report,
+e.g. `CL 330873` -> `CL-330873` (`formatPlate` in `src/lib/report.ts`).
+
+## Signature block
+"Suscribe," and the credentials below it are left-justified with a single
+line break between each line (no extra blank lines).
+
+---
+
 # Why the tool calls are failing
 
 ## Root Cause
