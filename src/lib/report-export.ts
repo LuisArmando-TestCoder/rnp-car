@@ -114,9 +114,9 @@ export async function buildReportDocx(v: RnpVehicleData, fill: ReportFill) {
     if (l.kind === "h1") {
       children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", bold: true, size: 52, font: "Arial", color: "111111" })], alignment: "center", spacing: { after: 360 }, keepNext: true }));
     } else if (l.kind === "sub") {
-      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", size: 28, font: "Arial", color: "333333", smallCaps: true })], alignment: "center", spacing: { after: 480 }, keepNext: true }));
+      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", size: 28, font: "Arial", color: "333333", smallCaps: true })], alignment: "center", spacing: { after: 120 }, keepNext: true }));
     } else if (l.kind === "h2") {
-      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", bold: true, size: 28, font: "Arial", color: "111111" })], spacing: { before: 360, after: 160 }, keepNext: true }));
+      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", bold: true, size: 28, font: "Arial", color: "111111" })], spacing: { before: 120, after: 160 }, keepNext: true }));
     } else if (l.kind === "p") {
       children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", size: 24, font: "Arial", color: "1a1a1a" })], alignment: "both", spacing: { after: 160 }, keepNext: true }));
     } else if (l.kind === "blank") {
