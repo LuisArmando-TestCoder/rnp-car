@@ -31,11 +31,11 @@ export function buildVehicleReport(v: RnpVehicleData, fill: ReportFill = {}): st
   add(`Estilo: ${v.general.estilo}`);
   add(`Categoría: ${v.general.categoria}`);
   add(`Carrocería: ${v.general.carroceria}`);
-  add(`Capacidad: ${v.general.capacidad} personas`);
+  add(`Capacidad: ${v.general.capacidad}`);
   add(`Color: ${v.general.color}`);
   add(`VIN: ${v.general.vin}`);
   add(`Motor: ${v.engine.numeroMotor}, ${v.engine.cilindrada}, ${v.engine.potencia}, ${v.engine.combustible}`);
-  add(`Peso Neto: ${v.general.pesoNeto} KG`);
+  add(`Peso Neto: ${v.general.pesoNeto}`);
   add(`Año de fabricación: ${v.general.anioFabricacion}`);
   add(`Odómetro: ${odometer} kilómetros`);
   add(`Transmisión: ${transmission}`);
