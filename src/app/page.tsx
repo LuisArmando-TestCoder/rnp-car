@@ -5,6 +5,7 @@ import styles from "./page.module.scss";
 import type { RnpVehicleData, RnpFormOptions } from "@/lib/rnp";
 import { buildVehicleReport } from "@/lib/report";
 import { renderReportHtml, buildReportDocx } from "@/lib/report-export";
+import { toPng } from "html-to-image";
 import Reveal from "@/components/Reveal";
 
 type StreamEvent =
@@ -34,6 +35,7 @@ export default function Home() {
   const [transmissionType, setTransmissionType] = useState("");
   const [exportPlate, setExportPlate] = useState("");
   const abortRef = useRef<AbortController | null>(null);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
 
   // Load the RNP form options (clase de código, search types, etc.) on mount
   useEffect(() => {
@@ -191,6 +193,45 @@ export default function Home() {
 
   const handleExportDocx = async () => {
     if (!data) return;
+    const blob = await buildReportDocx(data, { odometer, transmissionType, plate: exportPlate });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `informe-pericial-${data.plate.replace(/\s+/g, "-")}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Download the current page exactly as it looks, as a standalone HTML file.
+  const handleExportHtml = () => {
+    if (!data) return;
+    const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pagina-${data.plate.replace(/\s+/g, "-")}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Download both the image (screenshot of the results as they look) and the
+  // Word document in one click.
+  const handleExportImageAndDocx = async () => {
+    if (!data || !resultsRef.current) return;
+    try {
+      const png = await toPng(resultsRef.current, { pixelRatio: 2 });
+      const pngBlob = await (await fetch(png)).blob();
+      const pngUrl = URL.createObjectURL(pngBlob);
+      const a = document.createElement("a");
+      a.href = pngUrl;
+      a.download = `informe-pericial-${data.plate.replace(/\s+/g, "-")}.png`;
+      a.click();
+      URL.revokeObjectURL(pngUrl);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      return;
+    }
     const blob = await buildReportDocx(data, { odometer, transmissionType, plate: exportPlate });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -378,7 +419,7 @@ export default function Home() {
         {error && <div className={styles.error}>{error}</div>}
 
         {data && (
-          <div className={styles.results}>
+          <div className={styles.results} ref={resultsRef}>
             <div className={styles.exportRow}>
               <label className={styles.exportField}>
                 <span className={styles.fieldLabel}>Odómetro (km)</span>
@@ -418,6 +459,12 @@ export default function Home() {
               </button>
               <button className={styles.button} type="button" onClick={handleExportDocx}>
                 Exportar DOCX
+              </button>
+              <button className={styles.button} type="button" onClick={handleExportHtml}>
+                Exportar HTML
+              </button>
+              <button className={styles.button} type="button" onClick={handleExportImageAndDocx}>
+                Imagen + Word
               </button>
             </div>
             <section className={styles.card}>
