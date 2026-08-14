@@ -14,7 +14,7 @@ export interface ReportFill {
 export function buildVehicleReport(v: RnpVehicleData, fill: ReportFill = {}): string {
   const owner = v.owners[0];
   const odometer = fill.odometer || "______________________";
-  const transmission = fill.transmissionType || "______________________";
+  const transmission = fill.transmissionType || v.general.traccion || "______________________";
   const plate = fill.plate || v.plate;
 
   const lines: string[] = [];
@@ -38,7 +38,7 @@ export function buildVehicleReport(v: RnpVehicleData, fill: ReportFill = {}): st
   add(`Peso Neto: ${v.general.pesoNeto} KG`);
   add(`Año de fabricación: ${v.general.anioFabricacion}`);
   add(`Odómetro: ${odometer} kilómetros`);
-  add(`Transmisión: ${v.general.traccion}  ${transmission}`);
+  add(`Transmisión: ${transmission}`);
   add(`Placa: ${plate}`);
   addBlank();
   addBlank();
