@@ -168,3 +168,16 @@ tool executes.
 - **The template's "Verificaciones iniciales" section** contains the user's
   own draft text ("cuando aaa", "acerca de aaa") which was preserved verbatim
   as placeholders. The user may want to clean those up in the final document.
+
+## Post-Task Reflection — Póliza Scraping (2026-08-14)
+
+**What went well:**
+- The póliza feature was built end-to-end: form exploration script, LLM parser, scraper, form-options extractor, two API routes, and full UI integration.
+- The STAGE 4 dropdown-selection loop (from the earlier VIN task) generalized cleanly to the póliza form: same `select` iteration pattern, just different option labels.
+- Build passed on first try; both existing vehicle Playwright tests still pass (2 passed, 32.3s), confirming backward compatibility.
+
+**What could be improved:**
+- The póliza scraper has not been tested against the live RNP site yet (only the vehicle scraper was). A Playwright test for póliza should be added before relying on it in production.
+- The `RnpPolizaData` shape was inferred from the LLM parser's output contract, not from a live scrape. If the live form differs (different field labels, extra selects), the scraper may need adjustment.
+- Context window pressure remains the biggest operational risk: large file edits should continue to be done via shell commands (heredoc/perl/node) rather than write_to_file/replace_in_file with huge payloads.
+- The UI now has two consultation modes (vehículo/pólizas) sharing one logs panel. If both are used in one session, logs from the previous consultation persist. Consider clearing logs on mode switch.

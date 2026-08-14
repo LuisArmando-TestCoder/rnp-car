@@ -18,11 +18,14 @@ type SearchMode = "vin" | "placa" | "nombre";
 
 export default function Home() {
   const [consultationType, setConsultationType] = useState<ConsultationType>("vehiculo");
-  const [searchMode, setSearchMode] = useState<SearchMode>("vin");
+  const [searchMode, setSearchMode] = useState<SearchMode>("placa");
   const [vin, setVin] = useState("");
   const [plate, setPlate] = useState("");
   const [name, setName] = useState("");
   const [codeClass, setCodeClass] = useState("");
+  const [searchType, setSearchType] = useState("Número de Placa");
+  const [documentType, setDocumentType] = useState("");
+  const [vehicleType, setVehicleType] = useState("");
   const [formOptions, setFormOptions] = useState<RnpFormOptions | null>(null);
   const [polizaFormOptions, setPolizaFormOptions] = useState<RnpPolizaFormOptions | null>(null);
   const [optionsError, setOptionsError] = useState<string | null>(null);
@@ -49,6 +52,12 @@ export default function Home() {
         const json = (await res.json()) as RnpFormOptions;
         if (!cancelled) {
           setFormOptions(json);
+          if (json.searchTypes?.length) {
+            const plateFirst = ["Número de Placa", ...json.searchTypes.filter((t) => t !== "Número de Placa")];
+            setSearchType(plateFirst[0]);
+          }
+          if (json.documentTypes?.length) setDocumentType(json.documentTypes[0]);
+          if (json.vehicleTypes?.length) setVehicleType(json.vehicleTypes[0]);
           if (!json.reachable) setOptionsError(json.error || "No se pudo cargar las opciones del formulario");
         }
       } catch (e) {
@@ -108,7 +117,11 @@ export default function Home() {
     const selections = {
       consultationType,
       searchMode,
-      searchType: searchMode === "placa" ? "Número de Placa" : searchMode === "nombre" ? "Nombre" : "Número de VIN",
+      searchType:
+        searchType ||
+        (searchMode === "placa" ? "Número de Placa" : searchMode === "nombre" ? "Nombre" : "Número de VIN"),
+      documentType: documentType || undefined,
+      vehicleType: vehicleType || undefined,
       codeClass: codeClass || undefined,
       plate: searchMode === "placa" ? plate : undefined,
       name: searchMode === "nombre" ? name : undefined,
@@ -408,21 +421,21 @@ export default function Home() {
                     <input
                       type="radio"
                       name="searchMode"
-                      checked={searchMode === "vin"}
-                      onChange={() => setSearchMode("vin")}
-                      disabled={loading}
-                    />
-                    Número de VIN
-                  </label>
-                  <label className={styles.radio}>
-                    <input
-                      type="radio"
-                      name="searchMode"
                       checked={searchMode === "placa"}
                       onChange={() => setSearchMode("placa")}
                       disabled={loading}
                     />
                     Número de Placa
+                  </label>
+                  <label className={styles.radio}>
+                    <input
+                      type="radio"
+                      name="searchMode"
+                      checked={searchMode === "vin"}
+                      onChange={() => setSearchMode("vin")}
+                      disabled={loading}
+                    />
+                    Número de VIN
                   </label>
                   <label className={styles.radio}>
                     <input
@@ -437,9 +450,68 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Step 3: Conditional input */}
+              {/* Step 3: Form selections (all options from the RNP form) */}
               <div className={styles.step}>
-                <span className={styles.stepLabel}>3. Datos del vehículo</span>
+                <span className={styles.stepLabel}>3. Selecciones del formulario</span>
+                <div className={styles.formRow}>
+                  <select
+                    className={styles.select}
+                    value={searchType}
+                    onChange={(e) => setSearchType(e.target.value)}
+                    disabled={loading}
+                  >
+                    {formOptions?.searchTypes?.length ? (
+                      ["Número de Placa", ...formOptions.searchTypes.filter((t) => t !== "Número de Placa")].map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Número de Placa">Número de Placa</option>
+                        <option value="Número de VIN">Número de VIN</option>
+                        <option value="Nombre">Nombre</option>
+                      </>
+                    )}
+                  </select>
+                  <select
+                    className={styles.select}
+                    value={documentType}
+                    onChange={(e) => setDocumentType(e.target.value)}
+                    disabled={loading}
+                  >
+                    {formOptions?.documentTypes?.length ? (
+                      formOptions.documentTypes.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">Tipo de documento</option>
+                    )}
+                  </select>
+                  <select
+                    className={styles.select}
+                    value={vehicleType}
+                    onChange={(e) => setVehicleType(e.target.value)}
+                    disabled={loading}
+                  >
+                    {formOptions?.vehicleTypes?.length ? (
+                      formOptions.vehicleTypes.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">Tipo de vehículo</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {/* Step 4: Conditional input */}
+              <div className={styles.step}>
+                <span className={styles.stepLabel}>4. Datos del vehículo</span>
                 {searchMode === "vin" && (
                   <div className={styles.formRow}>
                     <input
