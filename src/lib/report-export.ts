@@ -67,8 +67,11 @@ export function renderReportHtml(v: RnpVehicleData, fill: ReportFill): string {
     else if (l.kind === "blank") parts.push(`<div class="sp"></div>`);
     else if (l.kind === "sig") parts.push(`<p class="sig">${esc(l.text || "")}</p>`);
     else if (l.kind === "table" && l.rows) {
-      const trs = l.rows.map(([k, val]) => `<tr><td class="k">${esc(k)}</td><td>${esc(val)}</td></tr>`).join("");
-      parts.push(`<table class="chars"><tbody>${trs}</tbody></table>`);
+      // Render the characteristics fields as plain lines separated by break
+      // lines (no table, no bullets, no numbering).
+      for (const [k, val] of l.rows) {
+        parts.push(`<p class="char"><strong>${esc(k)}:</strong> ${esc(val)}</p>`);
+      }
     } else parts.push(`<p>${esc(l.text || "")}</p>`);
   }
   const css = `
@@ -94,9 +97,7 @@ export function renderReportHtml(v: RnpVehicleData, fill: ReportFill): string {
     p { margin: 0 0 4mm; text-align: justify; orphans: 3; widows: 3; }
     .sp { height: 3mm; }
     .sig { margin: 12mm 0 0; text-align: center; }
-    table.chars { width: 100%; border-collapse: collapse; margin: 2mm 0 7mm; break-inside: avoid; }
-    table.chars td { padding: 2mm 2.5mm; border-bottom: 0.5pt solid #d5d5d5; font-size: 12pt; vertical-align: top; }
-    table.chars td.k { font-weight: 700; width: 42%; color: #2b2b2b; }
+    p.char { margin: 0 0 2mm; text-align: left; }
   `;
   const header = `<div class="header"><img src="${LOGO_DATA_URI}" alt="logo"><hr></div>`;
   const footerLeft = `<div class="footer-left">info@mylconsultoríasyperitajes.com</div>`;
@@ -123,20 +124,18 @@ export async function buildReportDocx(v: RnpVehicleData, fill: ReportFill) {
     } else if (l.kind === "sig") {
       children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", size: 24, font: "Arial", color: "1a1a1a" })], alignment: "center", spacing: { after: 160 } }));
     } else if (l.kind === "table" && l.rows) {
-      const cellBorder = {
-        bottom: { style: BorderStyle.SINGLE, size: 4, color: "d5d5d5", space: 2 },
-      };
-      const cellMargins = {
-        top: 80,
-        bottom: 80,
-        left: 100,
-        right: 100,
-      };
-      const rowNodes = l.rows.map(([k, val]) => new TableRow({ cantSplit: true, children: [
-        new TableCell({ width: { size: 42, type: WidthType.PERCENTAGE }, borders: cellBorder, margins: cellMargins, children: [new Paragraph({ children: [new TextRun({ text: k, bold: true, size: 24, font: "Arial", color: "111111" })] })] }),
-        new TableCell({ width: { size: 58, type: WidthType.PERCENTAGE }, borders: cellBorder, margins: cellMargins, children: [new Paragraph({ children: [new TextRun({ text: val, size: 24, font: "Arial", color: "1a1a1a" })] })] }),
-      ] }));
-      children.push(new Table({ rows: rowNodes, width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [4133, 5707] }));
+      // Render the characteristics fields as plain lines separated by break
+      // lines (no table, no bullets, no numbering).
+      for (const [k, val] of l.rows) {
+        children.push(new Paragraph({
+          children: [
+            new TextRun({ text: `${k}: `, bold: true, size: 24, font: "Arial", color: "111111" }),
+            new TextRun({ text: val, size: 24, font: "Arial", color: "1a1a1a" }),
+          ],
+          spacing: { after: 80 },
+          keepNext: true,
+        }));
+      }
       children.push(new Paragraph({ spacing: { after: 160 } }));
     }
   }
