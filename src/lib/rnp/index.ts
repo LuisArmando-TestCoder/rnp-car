@@ -1,9 +1,12 @@
 export * from "./types";
 export { scrapePropertyData } from "./scraper";
 export { scrapeVehicleData } from "./vehicle-scraper";
+export { scrapePolizaData } from "./poliza-scraper";
 export { extractVehicleFormOptions } from "./form-options";
+export { extractPolizaFormOptions } from "./poliza-form-options";
 export { extractVehicleData } from "./vehicle-parser";
 export { extractVehicleDataWithLLM } from "./vehicle-llm-parser";
+export { extractPolizaDataWithLLM } from "./poliza-llm-parser";
 export { performSecureLogin, safeLogout } from "./auth";
 export { navigateToPropertySearch } from "./navigation";
 export { executePropertySearch, parseFinca } from "./search";

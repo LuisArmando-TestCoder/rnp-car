@@ -190,3 +190,115 @@ export interface RnpVehicleScrapeOptions {
   /** Abort signal to cancel the scrape early (e.g. client disconnect) */
   signal?: AbortSignal;
 }
+
+// ─── Póliza consultation ─────────────────────────────────────────────────
+
+export interface RnpPolizaData {
+  /** Aduana, e.g. "05 SANTAMARIA" */
+  aduana: string;
+  /** Póliza year, e.g. "2022" */
+  anioPoliza: string;
+  /** Póliza number, e.g. "039235" */
+  numeroPoliza: string;
+  /** Línea, e.g. "001" */
+  linea: string;
+  /** Fecha de la póliza, e.g. "21-ene-2022" */
+  fechaPoliza: string;
+  /** Vehicle data from the póliza detail */
+  vehiculo: {
+    marca: string;
+    modelo: string;
+    numeroMotor: string;
+    numeroChasis: string;
+    estilo: string;
+    color: string;
+    cilindrada: string;
+    cilindros: string;
+    potencia: string;
+    longitud: string;
+    modeloMotor: string;
+    cambioMotor: string;
+    pesoNeto: string;
+    pbvFabricante: string;
+    pesoRemolque: string;
+    pesoVacio: string;
+    categoria: string;
+    carroceria: string;
+    techo: string;
+    marcaMotor: string;
+    tipo: string;
+    traccion: string;
+    cabina: string;
+    procedencia: string;
+    capacidad: string;
+    ejes: string;
+    refaccion: string;
+    convertido: string;
+    serie: string;
+    vin: string;
+    combustible: string;
+    notaExoneracion: string;
+    leyExoneracion: string;
+    observaciones: string;
+    importador: string;
+    anioFabricacion: string;
+    identificacionImportador: string;
+    fechaTica: string;
+    fechaRTV: string;
+    horaRTV: string;
+    fechaINS: string;
+    horaINS: string;
+    pago: string;
+  };
+  /** Citas de presentación */
+  citas: {
+    tomo: string;
+    asiento: string;
+    secuencia: string;
+  };
+  /** Whether the póliza has a resolución */
+  tieneResolucion: boolean;
+  /** Resolución text if present */
+  resolucion?: string;
+  rawText: string;
+  scrapedAt: string;
+  /** Base64-encoded PDF of the RNP detail page */
+  resultPdfBase64?: string;
+}
+
+export interface RnpPolizaScrapeResult {
+  status: "success" | "not_found" | "error";
+  data?: RnpPolizaData;
+  error?: string;
+  logs: string[];
+}
+
+export type RnpPolizaSearchMode = "poliza" | "chasis" | "motor" | "vin" | "serie";
+
+export interface RnpPolizaSelections {
+  /** Search type shown in the form dropdown (e.g. "Número de VIN") */
+  searchType?: string;
+  /** Aduana code (e.g. "000005") */
+  aduana?: string;
+}
+
+export interface RnpPolizaFormOptions {
+  /** Options for the search type dropdown */
+  searchTypes: string[];
+  /** Options for the aduana dropdown */
+  aduanas: { value: string; label: string }[];
+  /** Whether the form was reachable (false if WAF blocked) */
+  reachable: boolean;
+  /** Error message if the form was not reachable */
+  error?: string;
+}
+
+export interface RnpPolizaScrapeOptions {
+  credentials?: RnpCredentials;
+  headless?: boolean;
+  timeoutMs?: number;
+  onLog?: (message: string) => void;
+  selections?: RnpPolizaSelections;
+  /** Abort signal to cancel the scrape early (e.g. client disconnect) */
+  signal?: AbortSignal;
+}

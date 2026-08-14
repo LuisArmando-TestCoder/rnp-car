@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./page.module.scss";
-import type { RnpVehicleData, RnpFormOptions } from "@/lib/rnp";
+import type { RnpVehicleData, RnpFormOptions, RnpPolizaData, RnpPolizaFormOptions } from "@/lib/rnp";
 import { buildVehicleReport } from "@/lib/report";
 import { renderReportHtml, buildReportDocx } from "@/lib/report-export";
 import Reveal from "@/components/Reveal";
@@ -24,7 +24,12 @@ export default function Home() {
   const [name, setName] = useState("");
   const [codeClass, setCodeClass] = useState("");
   const [formOptions, setFormOptions] = useState<RnpFormOptions | null>(null);
+  const [polizaFormOptions, setPolizaFormOptions] = useState<RnpPolizaFormOptions | null>(null);
   const [optionsError, setOptionsError] = useState<string | null>(null);
+  const [polizaSearchValue, setPolizaSearchValue] = useState("");
+  const [polizaSearchType, setPolizaSearchType] = useState("Número de VIN");
+  const [polizaAduana, setPolizaAduana] = useState("");
+  const [polizaData, setPolizaData] = useState<RnpPolizaData | null>(null);
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [data, setData] = useState<RnpVehicleData | null>(null);
@@ -45,6 +50,27 @@ export default function Home() {
         if (!cancelled) {
           setFormOptions(json);
           if (!json.reachable) setOptionsError(json.error || "No se pudo cargar las opciones del formulario");
+        }
+      } catch (e) {
+        if (!cancelled) setOptionsError(e instanceof Error ? e.message : String(e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Load the póliza form options (search types, aduanas) on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/poliza/options");
+        const json = (await res.json()) as RnpPolizaFormOptions;
+        if (!cancelled) {
+          setPolizaFormOptions(json);
+          if (json.searchTypes?.length) setPolizaSearchType(json.searchTypes[0]);
+          if (json.aduanas?.length) setPolizaAduana(json.aduanas[0].label);
         }
       } catch (e) {
         if (!cancelled) setOptionsError(e instanceof Error ? e.message : String(e));
@@ -156,6 +182,85 @@ export default function Home() {
     abortRef.current?.abort();
   };
 
+  const handlePolizaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!polizaSearchValue.trim()) return;
+
+    setLoading(true);
+    setLogs([]);
+    setPolizaData(null);
+    setError(null);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const res = await fetch("/api/poliza", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          searchValue: polizaSearchValue.trim(),
+          selections: {
+            searchType: polizaSearchType,
+            aduana: polizaAduana,
+          },
+        }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok || !res.body) {
+        const err = await res.json().catch(() => ({ error: "Request failed" }));
+        setError(err.error || "Request failed");
+        setLoading(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let evt: StreamEvent;
+          try {
+            evt = JSON.parse(line);
+          } catch {
+            continue;
+          }
+
+          if (evt.type === "log") {
+            setLogs((prev) => [...prev, evt.line]);
+          } else if (evt.type === "result") {
+            if (evt.status === "success" && evt.data) {
+              setPolizaData(evt.data as unknown as RnpPolizaData);
+            } else {
+              setError(evt.message || "Póliza no encontrada");
+            }
+          } else if (evt.type === "error") {
+            setError(evt.message);
+          }
+        }
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setLogs((prev) => [...prev, "[CLIENT] Consulta cancelada por el usuario."]);
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      abortRef.current = null;
+      setLoading(false);
+    }
+  };
+
   // Build the full "Informe Pericial del Vehículo" report following the
   // "Argumentos periciales placa.docx" template.
   const buildReport = () => {
@@ -262,7 +367,10 @@ export default function Home() {
           Selecciona el tipo de consulta y completa los campos que aparecen
         </p>
 
-        <form className={styles.form} onSubmit={handleSubmit}>
+        <form
+          className={styles.form}
+          onSubmit={consultationType === "polizas" ? handlePolizaSubmit : handleSubmit}
+        >
           {/* Step 1: Consultation type */}
           <div className={styles.step}>
             <span className={styles.stepLabel}>1. Tipo de consulta</span>
@@ -387,11 +495,55 @@ export default function Home() {
 
           {consultationType === "polizas" && (
             <div className={styles.step}>
-              <span className={styles.stepLabel}>Consulta de Pólizas</span>
-              <p className={styles.hint}>
-                La consulta de pólizas aún no está disponible. Selecciona
-                "Consulta de Vehículo" para continuar.
-              </p>
+              <span className={styles.stepLabel}>2. Datos de la póliza</span>
+              <div className={styles.formRow}>
+                <select
+                  className={styles.select}
+                  value={polizaSearchType}
+                  onChange={(e) => setPolizaSearchType(e.target.value)}
+                  disabled={loading}
+                >
+                  {polizaFormOptions?.searchTypes?.length ? (
+                    polizaFormOptions.searchTypes.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="Número de VIN">Número de VIN</option>
+                      <option value="Número de Placa">Número de Placa</option>
+                      <option value="Número de Póliza">Número de Póliza</option>
+                    </>
+                  )}
+                </select>
+                <select
+                  className={styles.select}
+                  value={polizaAduana}
+                  onChange={(e) => setPolizaAduana(e.target.value)}
+                  disabled={loading}
+                >
+                  {polizaFormOptions?.aduanas?.length ? (
+                    polizaFormOptions.aduanas.map((a) => (
+                      <option key={a.value} value={a.label}>
+                        {a.label}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">Aduana (opcional)</option>
+                  )}
+                </select>
+              </div>
+              <div className={styles.formRow}>
+                <input
+                  className={styles.input}
+                  type="text"
+                  value={polizaSearchValue}
+                  onChange={(e) => setPolizaSearchValue(e.target.value)}
+                  placeholder="MMBJLKL10NH027545"
+                  disabled={loading}
+                />
+              </div>
             </div>
           )}
 
@@ -401,7 +553,11 @@ export default function Home() {
             <button
               className={styles.button}
               type="submit"
-              disabled={loading || !searchValue.trim() || consultationType === "polizas"}
+              disabled={
+                loading ||
+                (consultationType === "vehiculo" && !searchValue.trim()) ||
+                (consultationType === "polizas" && !polizaSearchValue.trim())
+              }
             >
               {loading ? "Consultando..." : "Consultar"}
             </button>
@@ -623,6 +779,101 @@ export default function Home() {
                 </span>
               </div>
             </section>
+          </div>
+        )}
+
+        {polizaData && (
+          <div className={styles.results}>
+            <section className={styles.card}>
+              <h2 className={styles.cardTitle}>Póliza</h2>
+              <div className={styles.grid}>
+                <div className={styles.field}>
+                  <span className={styles.label}>Aduana</span>
+                  <span className={styles.value}>{polizaData.aduana}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Año Póliza</span>
+                  <span className={styles.value}>{polizaData.anioPoliza}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Número Póliza</span>
+                  <span className={styles.value}>{polizaData.numeroPoliza}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Línea</span>
+                  <span className={styles.value}>{polizaData.linea}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Fecha Póliza</span>
+                  <span className={styles.value}>{polizaData.fechaPoliza}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Tomo</span>
+                  <span className={styles.value}>{polizaData.citas.tomo}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Asiento</span>
+                  <span className={styles.value}>{polizaData.citas.asiento}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Secuencia</span>
+                  <span className={styles.value}>{polizaData.citas.secuencia}</span>
+                </div>
+              </div>
+            </section>
+
+            <section className={styles.card}>
+              <h2 className={styles.cardTitle}>Vehículo (Póliza)</h2>
+              <div className={styles.grid}>
+                <div className={styles.field}>
+                  <span className={styles.label}>Marca</span>
+                  <span className={styles.value}>{polizaData.vehiculo.marca}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Modelo</span>
+                  <span className={styles.value}>{polizaData.vehiculo.modelo}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>VIN</span>
+                  <span className={styles.value}>{polizaData.vehiculo.vin}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Chasis</span>
+                  <span className={styles.value}>{polizaData.vehiculo.numeroChasis}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Motor</span>
+                  <span className={styles.value}>{polizaData.vehiculo.numeroMotor}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Color</span>
+                  <span className={styles.value}>{polizaData.vehiculo.color}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Año Fabricación</span>
+                  <span className={styles.value}>{polizaData.vehiculo.anioFabricacion}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Categoría</span>
+                  <span className={styles.value}>{polizaData.vehiculo.categoria}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Combustible</span>
+                  <span className={styles.value}>{polizaData.vehiculo.combustible}</span>
+                </div>
+                <div className={styles.field}>
+                  <span className={styles.label}>Importador</span>
+                  <span className={styles.value}>{polizaData.vehiculo.importador}</span>
+                </div>
+              </div>
+            </section>
+
+            {polizaData.tieneResolucion && polizaData.resolucion && (
+              <section className={styles.card}>
+                <h2 className={styles.cardTitle}>Resolución</h2>
+                <p className={styles.description}>{polizaData.resolucion}</p>
+              </section>
+            )}
           </div>
         )}
 
