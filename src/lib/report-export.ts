@@ -92,8 +92,8 @@ export function renderReportHtml(v: RnpVehicleData, fill: ReportFill): string {
     .footer-right { position: running(footer-right); font-size: 9pt; color: #333; text-align: right; }
     .footer-center { position: running(footer-center); font-size: 9pt; color: #333; text-align: center; }
     h1 { font-size: 26pt; letter-spacing: 0.02em; color: #0f0f0f; text-align: center; margin: 0 0 5mm; border-bottom: 2.5pt solid #1a1a1a; padding-bottom: 5mm; break-after: avoid; }
-    .sub { text-align: center; font-variant: small-caps; letter-spacing: 0.16em; font-size: 14pt; margin: 0 0 12mm; break-after: avoid; }
-    h2 { font-size: 14pt; letter-spacing: 0.03em; text-transform: uppercase; color: #0f0f0f; margin: 8mm 0 3mm; padding-bottom: 1.5mm; border-bottom: 0.75pt solid #aaa; break-after: avoid; orphans: 3; widows: 3; }
+    .sub { text-align: center; font-variant: small-caps; letter-spacing: 0.16em; font-size: 14pt; margin: 0 0 0; break-after: avoid; }
+    h2 { font-size: 14pt; letter-spacing: 0.03em; text-transform: uppercase; color: #0f0f0f; margin: 0 0 3mm; break-after: avoid; orphans: 3; widows: 3; }
     p { margin: 0 0 4mm; text-align: justify; orphans: 3; widows: 3; }
     .sp { height: 3mm; }
     .sig { margin: 12mm 0 0; text-align: center; }
@@ -114,9 +114,9 @@ export async function buildReportDocx(v: RnpVehicleData, fill: ReportFill) {
     if (l.kind === "h1") {
       children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", bold: true, size: 52, font: "Arial", color: "111111" })], alignment: "center", spacing: { after: 360 }, keepNext: true }));
     } else if (l.kind === "sub") {
-      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", size: 28, font: "Arial", color: "333333", smallCaps: true })], alignment: "center", spacing: { after: 120 }, keepNext: true }));
+      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", size: 28, font: "Arial", color: "333333", smallCaps: true })], alignment: "center", spacing: { after: 0 }, keepNext: true }));
     } else if (l.kind === "h2") {
-      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", bold: true, size: 28, font: "Arial", color: "111111" })], spacing: { before: 120, after: 160 }, keepNext: true }));
+      children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", bold: true, size: 28, font: "Arial", color: "111111" })], spacing: { before: 0, after: 0 }, keepNext: true }));
     } else if (l.kind === "p") {
       children.push(new Paragraph({ children: [new TextRun({ text: l.text || "", size: 24, font: "Arial", color: "1a1a1a" })], alignment: "both", spacing: { after: 160 }, keepNext: true }));
     } else if (l.kind === "blank") {
