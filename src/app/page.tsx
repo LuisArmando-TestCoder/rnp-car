@@ -16,14 +16,23 @@ type StreamEvent =
 type ConsultationType = "vehiculo" | "polizas";
 type SearchMode = "vin" | "placa" | "nombre";
 
+/**
+ * Detect what kind of search input the user typed:
+ * - 17 alphanumeric characters (after trim) -> VIN
+ * - Only letters and spaces -> owner name
+ * - Everything else -> license plate
+ */
+function detectMode(value: string): SearchMode {
+  const trimmed = value.trim();
+  if (/^[A-Za-z0-9]{17}$/.test(trimmed)) return "vin";
+  if (/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(trimmed)) return "nombre";
+  return "placa";
+}
+
 export default function Home() {
   const [consultationType, setConsultationType] = useState<ConsultationType>("vehiculo");
-  const [searchMode, setSearchMode] = useState<SearchMode>("placa");
-  const [vin, setVin] = useState("");
-  const [plate, setPlate] = useState("");
-  const [name, setName] = useState("");
+  const [vinInput, setVinInput] = useState("");
   const [codeClass, setCodeClass] = useState("");
-  const [searchType, setSearchType] = useState("Número de Placa");
   const [documentType, setDocumentType] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [formOptions, setFormOptions] = useState<RnpFormOptions | null>(null);
@@ -52,10 +61,6 @@ export default function Home() {
         const json = (await res.json()) as RnpFormOptions;
         if (!cancelled) {
           setFormOptions(json);
-          if (json.searchTypes?.length) {
-            const plateFirst = ["Número de Placa", ...json.searchTypes.filter((t) => t !== "Número de Placa")];
-            setSearchType(plateFirst[0]);
-          }
           if (json.documentTypes?.length) setDocumentType(json.documentTypes[0]);
           if (json.vehicleTypes?.length) setVehicleType(json.vehicleTypes[0]);
           if (!json.reachable) setOptionsError(json.error || "No se pudo cargar las opciones del formulario");
@@ -90,17 +95,11 @@ export default function Home() {
     };
   }, []);
 
-  // Reuse previous VIN data: pre-fill plate and vehicle type
-  useEffect(() => {
-    if (lastVehicle) {
-      setPlate(lastVehicle.plate || "");
-      if (lastVehicle.general?.categoria) {
-        // Keep the vehicle type in sync with the last extracted vehicle
-      }
-    }
-  }, [lastVehicle]);
-
-  const searchValue = searchMode === "vin" ? vin : searchMode === "placa" ? plate : name;
+  const searchValue = vinInput;
+  const detectedMode = vinInput.trim() ? detectMode(vinInput) : null;
+  const detectedLabel = detectedMode === "vin" ? "VIN" : detectedMode === "nombre" ? "Nombre" : "Placa";
+  const detectedSearchType =
+    detectedMode === "vin" ? "Número de VIN" : detectedMode === "nombre" ? "Nombre" : "Número de Placa";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,17 +113,18 @@ export default function Home() {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const mode = detectMode(searchValue);
     const selections = {
       consultationType,
-      searchMode,
+      searchMode: mode,
       searchType:
-        searchType ||
-        (searchMode === "placa" ? "Número de Placa" : searchMode === "nombre" ? "Nombre" : "Número de VIN"),
+        mode === "vin" ? "Número de VIN" : mode === "nombre" ? "Nombre" : "Número de Placa",
       documentType: documentType || undefined,
       vehicleType: vehicleType || undefined,
-      codeClass: codeClass || undefined,
-      plate: searchMode === "placa" ? plate : undefined,
-      name: searchMode === "nombre" ? name : undefined,
+      codeClass: mode === "placa" ? codeClass || undefined : undefined,
+      vin: mode === "vin" ? searchValue.trim() : undefined,
+      plate: mode === "placa" ? searchValue.trim() : undefined,
+      name: mode === "nombre" ? searchValue.trim() : undefined,
     };
 
     try {
@@ -415,41 +415,37 @@ export default function Home() {
 
           {consultationType === "vehiculo" && (
             <>
-              {/* Step 2: Search mode */}
+              {/* Step 2: Datos del vehículo (auto-detected) */}
               <div className={styles.step}>
-                <span className={styles.stepLabel}>2. Modo de búsqueda</span>
-                <div className={styles.radioRow}>
-                  <label className={styles.radio}>
-                    <input
-                      type="radio"
-                      name="searchMode"
-                      checked={searchMode === "placa"}
-                      onChange={() => setSearchMode("placa")}
-                      disabled={loading}
-                    />
-                    Número de Placa
-                  </label>
-                  <label className={styles.radio}>
-                    <input
-                      type="radio"
-                      name="searchMode"
-                      checked={searchMode === "vin"}
-                      onChange={() => setSearchMode("vin")}
-                      disabled={loading}
-                    />
-                    Número de VIN
-                  </label>
-                  <label className={styles.radio}>
-                    <input
-                      type="radio"
-                      name="searchMode"
-                      checked={searchMode === "nombre"}
-                      onChange={() => setSearchMode("nombre")}
-                      disabled={loading}
-                    />
-                    Nombre
-                  </label>
+                <span className={styles.stepLabel}>2. Datos del vehículo</span>
+                <div className={styles.formRow}>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    value={vinInput}
+                    onChange={(e) => setVinInput(e.target.value)}
+                    placeholder="Placa, VIN o nombre — ej: CL 330873, MMBJLKL10NH027545, Juan Pérez"
+                    disabled={loading}
+                  />
+                  {detectedMode && <span className={styles.badge}>{detectedLabel} detectado</span>}
                 </div>
+                {detectedMode === "placa" && (
+                  <div className={styles.formRow}>
+                    <select
+                      className={styles.select}
+                      value={codeClass}
+                      onChange={(e) => setCodeClass(e.target.value)}
+                      disabled={loading}
+                    >
+                      <option value="">Clase de código (opcional)</option>
+                      {codeClasses.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.value} - {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Step 3: Form selections (all options from the RNP form) */}
@@ -458,9 +454,9 @@ export default function Home() {
                 <div className={styles.formRow}>
                   <select
                     className={styles.select}
-                    value={searchType}
-                    onChange={(e) => setSearchType(e.target.value)}
-                    disabled={loading}
+                    value={detectedSearchType}
+                    disabled
+                    title="Se detecta automáticamente según el dato ingresado"
                   >
                     {formOptions?.searchTypes?.length ? (
                       ["Número de Placa", ...formOptions.searchTypes.filter((t) => t !== "Número de Placa")].map((t) => (
@@ -509,60 +505,6 @@ export default function Home() {
                     )}
                   </select>
                 </div>
-              </div>
-
-              {/* Step 4: Conditional input */}
-              <div className={styles.step}>
-                <span className={styles.stepLabel}>4. Datos del vehículo</span>
-                {searchMode === "vin" && (
-                  <div className={styles.formRow}>
-                    <input
-                      className={styles.input}
-                      type="text"
-                      value={vin}
-                      onChange={(e) => setVin(e.target.value)}
-                      placeholder="MMBJLKL10NH027545"
-                      disabled={loading}
-                    />
-                  </div>
-                )}
-                {searchMode === "placa" && (
-                  <div className={styles.formRow}>
-                    <input
-                      className={styles.input}
-                      type="text"
-                      value={plate}
-                      onChange={(e) => setPlate(e.target.value)}
-                      placeholder="CL 330873"
-                      disabled={loading}
-                    />
-                    <select
-                      className={styles.select}
-                      value={codeClass}
-                      onChange={(e) => setCodeClass(e.target.value)}
-                      disabled={loading}
-                    >
-                      <option value="">Clase de código (opcional)</option>
-                      {codeClasses.map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {c.value} - {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {searchMode === "nombre" && (
-                  <div className={styles.formRow}>
-                    <input
-                      className={styles.input}
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Nombre del propietario"
-                      disabled={loading}
-                    />
-                  </div>
-                )}
               </div>
             </>
           )}
