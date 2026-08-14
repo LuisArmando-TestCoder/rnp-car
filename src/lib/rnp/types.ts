@@ -165,10 +165,18 @@ export interface RnpVehicleSelections {
   name?: string;
 }
 
+/** A select option with its submitted value and visible label */
+export interface RnpFormOption {
+  /** Submitted value, e.g. "CL" */
+  value: string;
+  /** Visible label, e.g. "CL-CARGA LIVIANA" */
+  label: string;
+}
+
 /** Options extracted from the RNP consultation form HTML */
 export interface RnpFormOptions {
   /** Options for the "clase de código" dropdown */
-  codeClasses: string[];
+  codeClasses: RnpFormOption[];
   /** Options for the search type dropdown */
   searchTypes: string[];
   /** Options for the document type dropdown */

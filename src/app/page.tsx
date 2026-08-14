@@ -360,7 +360,9 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const codeClasses = formOptions?.codeClasses?.length ? formOptions.codeClasses : ["CL"];
+  const codeClasses = formOptions?.codeClasses?.length
+    ? formOptions.codeClasses
+    : [{ value: "CL", label: "CARGA LIVIANA" }];
 
   return (
     <main className={styles.container}>
@@ -542,8 +544,8 @@ export default function Home() {
                     >
                       <option value="">Clase de código (opcional)</option>
                       {codeClasses.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
+                        <option key={c.value} value={c.value}>
+                          {c.value} - {c.label}
                         </option>
                       ))}
                     </select>

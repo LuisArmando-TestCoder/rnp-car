@@ -34,14 +34,43 @@ export async function extractVehicleFormOptions(
     }
     const selects = page.locator("select");
     const n = await selects.count();
-    const out: RnpFormOptions = { codeClasses: [], searchTypes: [], documentTypes: [], vehicleTypes: [], reachable: true };
+
+    const extractOptions = (sel: ReturnType<typeof page.locator>) =>
+      sel
+        .locator("option")
+        .evaluateAll((els) =>
+          els.map((el) => ({ value: (el as HTMLOptionElement).value, label: el.textContent?.trim() || "" }))
+        )
+        .then((arr) => arr.filter((o) => o.label));
+
+    // "Clase de código" lives in select#class (a very long dropdown of plate code classes).
+    const classSelect = page.locator("select#class");
+    const hasClassSelect = (await classSelect.count()) > 0;
+
+    const out: RnpFormOptions = {
+      codeClasses: [],
+      searchTypes: [],
+      documentTypes: [],
+      vehicleTypes: [],
+      reachable: true,
+    };
+
+    if (hasClassSelect) {
+      out.codeClasses = await extractOptions(classSelect);
+    }
+
+    let searchIdx = 0;
     for (let i = 0; i < n; i++) {
-      const optsArr = await selects.nth(i).locator("option").allTextContents();
+      const sel = selects.nth(i);
+      // Skip the dedicated class select (already handled above)
+      const id = (await sel.getAttribute("id")) || "";
+      if (id === "class") continue;
+      const optsArr = await sel.locator("option").allTextContents();
       const clean = optsArr.map((t) => t.trim()).filter(Boolean);
-      if (i === 0) out.searchTypes = clean;
-      else if (i === 1) out.documentTypes = clean;
-      else if (i === 2) out.vehicleTypes = clean;
-      else out.codeClasses = clean;
+      if (searchIdx === 0) out.searchTypes = clean;
+      else if (searchIdx === 1) out.documentTypes = clean;
+      else if (searchIdx === 2) out.vehicleTypes = clean;
+      searchIdx++;
     }
     return out;
   } catch (err) {
