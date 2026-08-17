@@ -1,95 +1,53 @@
-import OpenAI, {
-  APIConnectionError,
-  APIConnectionTimeoutError,
-  APIError,
-  AuthenticationError,
-  BadRequestError,
-  InternalServerError,
-  NotFoundError,
-  PermissionDeniedError,
-  RateLimitError,
-} from "openai";
-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+const ENDPOINT = "https://openrouter.ai/api/v1/audio/transcriptions";
+const MODEL = "openai/whisper-large-v3-turbo";
+
 /**
- * Maps SDK/network failures to a readable message and an HTTP status.
- * The SDK's own JSON.parse can throw a bare SyntaxError when OpenAI
- * returns an empty body or an HTML error page, so that case is handled
- * explicitly instead of leaking an awkward "Unexpected end of JSON input".
+ * Maps OpenRouter/network failures to a readable message and an HTTP status.
  */
 function describeError(err: unknown): { message: string; status: number } {
   if (err instanceof SyntaxError && /JSON/i.test(err.message)) {
     return {
       message:
-        "OpenAI responded with an empty or non-JSON body. The service returned an error page; try the file again in a moment.",
+        "OpenRouter responded with an empty or non-JSON body. Try the file again in a moment.",
       status: 502,
     };
   }
 
-  if (err instanceof APIConnectionTimeoutError) {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/timed out|abort/i.test(message)) {
     return { message: "The transcription service timed out. Try the file again.", status: 504 };
   }
-
-  if (err instanceof APIConnectionError) {
-    return {
-      message: "Could not reach the transcription service. Check the network and try again.",
-      status: 503,
-    };
-  }
-
-  if (err instanceof RateLimitError) {
+  if (/429|rate limit/i.test(message)) {
     return {
       message: "Rate limit hit on the transcription service. Wait a few seconds and try again.",
       status: 429,
     };
   }
-
-  if (err instanceof AuthenticationError) {
+  if (/401|unauthorized|api key/i.test(message)) {
     return {
       message: "The transcription service rejected the API key on the server.",
       status: 500,
     };
   }
 
-  if (err instanceof PermissionDeniedError) {
-    return {
-      message: "The transcription service denied access with the server API key.",
-      status: 500,
-    };
-  }
-
-  if (err instanceof NotFoundError) {
-    return { message: "The transcription service could not find the requested resource.", status: 500 };
-  }
-
-  if (err instanceof BadRequestError || err instanceof InternalServerError) {
-    const detail = err instanceof Error ? err.message : "Unknown upstream error.";
-    return { message: detail, status: err instanceof BadRequestError ? 400 : 502 };
-  }
-
-  if (err instanceof APIError) {
-    const detail = err instanceof Error ? err.message : "Unknown upstream error.";
-    const status = typeof err.status === "number" ? err.status : 502;
-    return { message: detail, status };
-  }
-
-  const message = err instanceof Error ? err.message : String(err);
   return { message, status: 500 };
 }
 
 /**
  * POST /api/transcribe
- * Transcribes a single audio file (OGG/MP3) using OpenAI Whisper.
+ * Transcribes a single audio file using OpenRouter's dedicated
+ * audio/transcriptions endpoint (whisper-large-v3-turbo).
  * Files must be transcribed one at a time, in upload order, by the client.
  */
 export async function POST(req: Request) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_OPEN_ROUTER_API_KEY;
   if (!apiKey) {
     return Response.json(
-      { error: "OPENAI_API_KEY is not configured on the server." },
+      { error: "NEXT_PUBLIC_OPEN_ROUTER_API_KEY is not configured on the server." },
       { status: 500 }
     );
   }
@@ -130,30 +88,57 @@ export async function POST(req: Request) {
   }
 
   try {
-    const client = new OpenAI({ apiKey });
-    const transcription = await client.audio.transcriptions.create({
-      file,
-      model: "whisper-1",
-      response_format: "text",
-      language: "es",
+    const upstream = new FormData();
+    upstream.append("file", file);
+    upstream.append("model", MODEL);
+
+    const res = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://aiexecutions.com",
+        "X-Title": "AI Executions",
+      },
+      body: upstream,
     });
 
-    if (typeof transcription !== "string") {
-      return Response.json({ error: "Transcription returned an unexpected format." }, { status: 500 });
+    const raw = await res.text().catch(() => "");
+    if (!res.ok) {
+      let detail = "Unknown upstream error.";
+      if (raw) {
+        try {
+          const data = JSON.parse(raw) as { error?: { message?: string }; message?: string };
+          detail = data.error?.message || data.message || raw.substring(0, 300);
+        } catch {
+          detail = raw.substring(0, 300);
+        }
+      }
+      throw new Error(`[OpenRouter] ${res.status}: ${detail}`);
     }
 
-    const text = transcription.trim();
+    let text = "";
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { text?: string };
+        text = typeof parsed.text === "string" ? parsed.text : "";
+      } catch {
+        // Some providers return the raw transcript as plain text.
+        text = raw;
+      }
+    }
+
+    text = text.trim();
     if (!text) {
       return Response.json(
-        { error: "The audio was transcribed but produced no text. The file may be silent or contain no speech." },
+        {
+          error:
+            "The audio was transcribed but produced no text. The file may be silent or contain no speech.",
+        },
         { status: 422 }
       );
     }
 
-    return Response.json({
-      fileName: file.name,
-      text,
-    });
+    return Response.json({ fileName: file.name, text });
   } catch (err) {
     const { message, status } = describeError(err);
     return Response.json({ error: message }, { status });
