@@ -1,8 +1,84 @@
-import OpenAI from "openai";
+import OpenAI, {
+  APIConnectionError,
+  APIConnectionTimeoutError,
+  APIError,
+  AuthenticationError,
+  BadRequestError,
+  InternalServerError,
+  NotFoundError,
+  PermissionDeniedError,
+  RateLimitError,
+} from "openai";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+/**
+ * Maps SDK/network failures to a readable message and an HTTP status.
+ * The SDK's own JSON.parse can throw a bare SyntaxError when OpenAI
+ * returns an empty body or an HTML error page, so that case is handled
+ * explicitly instead of leaking an awkward "Unexpected end of JSON input".
+ */
+function describeError(err: unknown): { message: string; status: number } {
+  if (err instanceof SyntaxError && /JSON/i.test(err.message)) {
+    return {
+      message:
+        "OpenAI responded with an empty or non-JSON body. The service returned an error page; try the file again in a moment.",
+      status: 502,
+    };
+  }
+
+  if (err instanceof APIConnectionTimeoutError) {
+    return { message: "The transcription service timed out. Try the file again.", status: 504 };
+  }
+
+  if (err instanceof APIConnectionError) {
+    return {
+      message: "Could not reach the transcription service. Check the network and try again.",
+      status: 503,
+    };
+  }
+
+  if (err instanceof RateLimitError) {
+    return {
+      message: "Rate limit hit on the transcription service. Wait a few seconds and try again.",
+      status: 429,
+    };
+  }
+
+  if (err instanceof AuthenticationError) {
+    return {
+      message: "The transcription service rejected the API key on the server.",
+      status: 500,
+    };
+  }
+
+  if (err instanceof PermissionDeniedError) {
+    return {
+      message: "The transcription service denied access with the server API key.",
+      status: 500,
+    };
+  }
+
+  if (err instanceof NotFoundError) {
+    return { message: "The transcription service could not find the requested resource.", status: 500 };
+  }
+
+  if (err instanceof BadRequestError || err instanceof InternalServerError) {
+    const detail = err instanceof Error ? err.message : "Unknown upstream error.";
+    return { message: detail, status: err instanceof BadRequestError ? 400 : 502 };
+  }
+
+  if (err instanceof APIError) {
+    const detail = err instanceof Error ? err.message : "Unknown upstream error.";
+    const status = typeof err.status === "number" ? err.status : 502;
+    return { message: detail, status };
+  }
+
+  const message = err instanceof Error ? err.message : String(err);
+  return { message, status: 500 };
+}
 
 /**
  * POST /api/transcribe
@@ -66,12 +142,20 @@ export async function POST(req: Request) {
       return Response.json({ error: "Transcription returned an unexpected format." }, { status: 500 });
     }
 
+    const text = transcription.trim();
+    if (!text) {
+      return Response.json(
+        { error: "The audio was transcribed but produced no text. The file may be silent or contain no speech." },
+        { status: 422 }
+      );
+    }
+
     return Response.json({
       fileName: file.name,
-      text: transcription.trim(),
+      text,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return Response.json({ error: message }, { status: 500 });
+    const { message, status } = describeError(err);
+    return Response.json({ error: message }, { status });
   }
 }

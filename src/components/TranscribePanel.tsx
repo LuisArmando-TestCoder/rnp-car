@@ -169,14 +169,32 @@ export default function TranscribePanel({ showHeader = false }: TranscribePanelP
           body: formData,
           signal: controller.signal,
         });
-        const json = (await res.json()) as { text?: string; error?: string };
-        if (!res.ok || !json.text) {
-          throw new Error(json.error || "Transcription failed.");
+
+        // Read as text first so an empty or non-JSON body (e.g. a proxy
+        // error page) is turned into a readable message instead of throwing
+        // "Unexpected end of JSON input" from res.json().
+        let body: { text?: string; error?: string } = {};
+        const raw = await res.text();
+        if (raw) {
+          try {
+            body = JSON.parse(raw) as { text?: string; error?: string };
+          } catch {
+            body = {};
+          }
         }
 
-        transcriptions.push({ fileName: entry.name, text: json.text });
+        if (!res.ok || !body.text) {
+          const message =
+            body.error ||
+            (raw
+              ? "The server returned an unexpected response while transcribing."
+              : "The server returned an empty response while transcribing.");
+          throw new Error(message);
+        }
+
+        transcriptions.push({ fileName: entry.name, text: body.text });
         setFiles((prev) =>
-          prev.map((f) => (f.id === entry.id ? { ...f, status: "done", text: json.text } : f))
+          prev.map((f) => (f.id === entry.id ? { ...f, status: "done", text: body.text } : f))
         );
       } catch (err) {
         const message =

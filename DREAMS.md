@@ -179,5 +179,22 @@ tool executes.
 **What could be improved:**
 - The póliza scraper has not been tested against the live RNP site yet (only the vehicle scraper was). A Playwright test for póliza should be added before relying on it in production.
 - The `RnpPolizaData` shape was inferred from the LLM parser's output contract, not from a live scrape. If the live form differs (different field labels, extra selects), the scraper may need adjustment.
-- Context window pressure remains the biggest operational risk: large file edits should continue to be done via shell commands (heredoc/perl/node) rather than write_to_file/replace_in_file with huge payloads.
-- The UI now has two consultation modes (vehículo/pólizas) sharing one logs panel. If both are used in one session, logs from the previous consultation persist. Consider clearing logs on mode switch.
+ - Context window pressure remains the biggest operational risk: large file edits should continue to be done via shell commands (heredoc/perl/node) rather than write_to_file/replace_in_file with huge payloads.
+ - The UI now has two consultation modes (vehículo/pólizas) sharing one logs panel. If both are used in one session, logs from the previous consultation persist. Consider clearing logs on mode switch.
+
+---
+
+# Post-task reflection: transcription "Unexpected end of JSON input" fix
+
+## What went well
+- Root cause identified as a bare `SyntaxError: Unexpected end of JSON input` leaking from either the OpenAI SDK (parsing an empty/HTML response body) or the client's `res.json()` on the same. The raw message is a Node `JSON.parse` artifact and gave the user no actionable info.
+- Server route now imports the SDK's typed error classes (`APIConnectionError`, `RateLimitError`, `AuthenticationError`, `BadRequestError`, etc.) and maps each to a readable message + proper HTTP status. A `SyntaxError` matching `/JSON/i` becomes a 502 with "OpenAI responded with an empty or non-JSON body."
+- Client now reads `res.text()` first, parses JSON defensively, and shows either the server's `error` field or a readable generic message. Empty and non-JSON responses can no longer throw raw JSON parse errors.
+- Added an explicit 422 when Whisper returns empty text (silent/no-speech audio) instead of treating it as success.
+- `npx tsc --noEmit` passes (empty log). ESLint cannot run because the repo has no flat `eslint.config.js` (pre-existing config gap, unrelated to this change).
+
+## What could be done better
+
+- The root upstream cause (an empty/HTML body from OpenAI or a proxy) was inferred, not observed. If it recurs, capture the raw response body on the server with a debug logger (the SDK's `APIError` exposes the status and body) and log it to diagnose whether it is rate limiting, a gateway, or an actual OpenAI outage.
+- `res.json()` is replaced by `res.text()` + manual parse; the same hardening would improve the other two client API calls (`/api/scrape`, `/api/poliza`, `/api/vehicle`) if they ever hit proxy error pages.
+- A retry-with-backoff on 429/5xx would turn "try again in a moment" into an automatic recovery, but adds complexity the quiet transcription queue probably does not need yet.
