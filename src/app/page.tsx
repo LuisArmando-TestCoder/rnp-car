@@ -6,6 +6,7 @@ import type { RnpVehicleData, RnpFormOptions, RnpPolizaData, RnpPolizaFormOption
 import { buildVehicleReport } from "@/lib/report";
 import { renderReportHtml, buildReportDocx } from "@/lib/report-export";
 import Reveal from "@/components/Reveal";
+import TranscribePanel from "@/components/TranscribePanel";
 
 type StreamEvent =
   | { type: "start"; vin: string }
@@ -15,6 +16,7 @@ type StreamEvent =
 
 type ConsultationType = "vehiculo" | "polizas";
 type SearchMode = "vin" | "placa" | "nombre";
+type AppSection = "scraper" | "transcribe";
 
 /**
  * Detect what kind of search input the user typed:
@@ -30,6 +32,7 @@ function detectMode(value: string): SearchMode {
 }
 
 export default function Home() {
+  const [activeSection, setActiveSection] = useState<AppSection>("scraper");
   const [consultationType, setConsultationType] = useState<ConsultationType>("vehiculo");
   const [vinInput, setVinInput] = useState("");
   const [codeClass, setCodeClass] = useState("");
@@ -358,14 +361,35 @@ export default function Home() {
   return (
     <main className={styles.container}>
       <Reveal>
-        <header className={styles.header}>
-          <h1 className={styles.title}>RNP Digital Scraper</h1>
-          <p className={styles.subtitle}>
-            Servicio de scraping del Registro Nacional de Costa Rica
-          </p>
-        </header>
+        <nav className={styles.nav} aria-label="Main navigation">
+          <span className={styles.navBrand}>RNP Digital</span>
+        </nav>
       </Reveal>
 
+      <Reveal delay={0.05}>
+        <div className={styles.sectionTabs} role="tablist" aria-label="App sections">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSection === "scraper"}
+            className={`${styles.sectionTab} ${activeSection === "scraper" ? styles.sectionTabActive : ""}`}
+            onClick={() => setActiveSection("scraper")}
+          >
+            Scraper
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSection === "transcribe"}
+            className={`${styles.sectionTab} ${activeSection === "transcribe" ? styles.sectionTabActive : ""}`}
+            onClick={() => setActiveSection("transcribe")}
+          >
+            Audio Transcription
+          </button>
+        </div>
+      </Reveal>
+
+      {activeSection === "scraper" && (
       <Reveal delay={0.1}>
       <section className={styles.searchSection}>
         <h2 className={styles.searchTitle}>Consulta Registral</h2>
@@ -835,6 +859,15 @@ export default function Home() {
         )}
       </section>
       </Reveal>
+      )}
+
+      {activeSection === "transcribe" && (
+        <Reveal delay={0.1}>
+          <section className={styles.transcribeSection} aria-label="Audio transcription">
+            <TranscribePanel />
+          </section>
+        </Reveal>
+      )}
 
       <Reveal delay={0.15}>
       <section className={styles.body}>

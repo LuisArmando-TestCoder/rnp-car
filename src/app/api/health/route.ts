@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 function runHealthChecks() {
   const checks: Array<{ name: string; status: string; detail?: string }> = [];
   const credentialCount = parseRnpCredentials().length;
+  const hasOpenAiKey = Boolean(process.env.OPENAI_API_KEY);
 
   checks.push({
     name: "RNP_URL",
@@ -16,6 +17,12 @@ function runHealthChecks() {
     name: "RNP_CREDENTIALS",
     status: credentialCount > 0 ? "ok" : "warn",
     detail: credentialCount > 0 ? `${credentialCount} account(s) configured` : "not set (provide credentials per request)",
+  });
+
+  checks.push({
+    name: "OPENAI_API_KEY",
+    status: hasOpenAiKey ? "ok" : "warn",
+    detail: hasOpenAiKey ? "configured (audio transcription)" : "not set (audio transcription disabled)",
   });
 
   return checks;

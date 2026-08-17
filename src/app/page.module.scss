@@ -4,6 +4,7 @@
   flex-direction: column;
   align-items: center;
   padding: 2rem 1.5rem;
+  position: relative;
   background:
     radial-gradient(1200px 600px at 80% -10%, rgba(59, 130, 246, 0.12), transparent 60%),
     radial-gradient(900px 500px at 10% 110%, rgba(16, 185, 129, 0.08), transparent 60%),
@@ -13,30 +14,85 @@
   overflow-x: hidden;
 }
 
-.header {
-  text-align: center;
-  margin-bottom: 4rem;
-  padding-top: 3rem;
+.sectionTabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 4.5rem auto 2.5rem;
+  padding: 0.4rem;
+  border-radius: 999px;
+  background: rgba(24, 24, 27, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  width: fit-content;
 }
 
-.title {
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  background: linear-gradient(135deg, #fafafa 0%, #94a3b8 50%, #60a5fa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.sectionTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #d4d4d8;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    color: #fafafa;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+  }
 }
 
-.subtitle {
-  margin-top: 1rem;
-  color: #a1a1aa;
-  font-size: 1.1rem;
-  max-width: 60ch;
-  margin-left: auto;
-  margin-right: auto;
+.sectionTabActive {
+  color: #fafafa;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 8px 24px -8px rgba(59, 130, 246, 0.55);
+}
+
+.transcribeSection {
+  width: 100%;
+  max-width: 960px;
+}
+
+.nav {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 0.6rem 1.5rem;
+  border-radius: 999px;
+  background: rgba(9, 9, 11, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 32px -12px rgba(0, 0, 0, 0.6);
+  line-height: 1;
+}
+
+.navBrand {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fafafa;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .searchSection {
