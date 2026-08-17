@@ -38,7 +38,7 @@ export function resolvePesoNeto(v: RnpVehicleData): string {
 export function buildVehicleReport(v: RnpVehicleData, fill: ReportFill = {}): string {
   const owner = v.owners[0];
   const odometer = fill.odometer || "______________________";
-  const transmission = fill.transmissionType || v.general.traccion || "______________________";
+  const transmission = fill.transmissionType || v.general.transmision || "______________________";
   const plate = formatPlate(fill.plate || v.plate);
 
   const lines: string[] = [];

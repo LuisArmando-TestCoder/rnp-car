@@ -41,6 +41,7 @@ export async function extractVehicleData(page: Page): Promise<RnpVehicleData> {
     carroceria: field("Carroceria") || field("Carrocería"),
     pesoNeto: field("Peso Neto"),
     traccion: field("Tracción") || field("Traccion"),
+    transmision: field("Transmisión") || field("Transmision"),
     pbvFabricante: field("PBV (Fabricante)"),
     chasis: field("# de Chasis") || field("Chasis"),
     valorHacienda: field("Valor Hacienda"),

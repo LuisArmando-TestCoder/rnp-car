@@ -84,6 +84,7 @@ export interface RnpVehicleData {
     carroceria: string;
     pesoNeto: string;
     traccion: string;
+    transmision: string;
     pbvFabricante: string;
     chasis: string;
     valorHacienda: string;

@@ -25,6 +25,7 @@ Extract ALL vehicle data from the provided HTML/innerText and return it as a SIN
     "carroceria": "string",
     "pesoNeto": "string",
     "traccion": "string",
+    "transmision": "string",
     "pbvFabricante": "string",
     "chasis": "string",
     "valorHacienda": "string",

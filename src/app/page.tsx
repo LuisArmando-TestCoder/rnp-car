@@ -164,7 +164,7 @@ export default function Home() {
               setData(evt.data);
               setLastVehicle(evt.data);
               setExportPlate(evt.data.plate || "");
-              setTransmissionType(evt.data.general.traccion || "");
+              setTransmissionType(evt.data.general.transmision || "");
             } else {
               setError(evt.message || "Vehículo no encontrado");
             }
